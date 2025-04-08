@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dry Beans Database</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css" rel="stylesheet">
+  <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+
+  <div id="toast" class="toast align-items-center text-white position-fixed top-0 end-0 m-3" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner-container">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-3">Loading Beans...</p>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="container-fluid py-4">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card shadow mb-4">
+          <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+              <h2 class="fw-bold mb-0"><i class="fas fa-seedling me-2"></i>Dry Beans Database</h2>
+              <div class="d-flex">
+                <button class="btn btn-light me-2" id="toggleChartBtn">
+                  <i class="fas fa-chart-pie me-1"></i> Toggle Chart
+                </button>
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addBeanModal">
+                  <i class="fas fa-plus-circle me-1"></i> Add Bean
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <!-- Stats Cards -->
+            <div class="row mb-4" id="statsContainer">
+              <div class="col-md-3 mb-3">
+                <div class="card stat-card bg-info bg-opacity-10 border-info">
+                  <div class="card-body">
+                    <h5 class="card-title">Total Beans</h5>
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-seedling fa-2x text-info me-3"></i>
+                      <h2 class="mb-0" id="totalBeans">0</h2>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3 mb-3">
+                <div class="card stat-card bg-success bg-opacity-10 border-success">
+                  <div class="card-body">
+                    <h5 class="card-title">Classes</h5>
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-tags fa-2x text-success me-3"></i>
+                      <h2 class="mb-0" id="totalClasses">0</h2>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3 mb-3">
+                <div class="card stat-card bg-warning bg-opacity-10 border-warning">
+                  <div class="card-body">
+                    <h5 class="card-title">Avg Area</h5>
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-ruler-combined fa-2x text-warning me-3"></i>
+                      <h2 class="mb-0" id="avgArea">0</h2>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3 mb-3">
+                <div class="card stat-card bg-danger bg-opacity-10 border-danger">
+                  <div class="card-body">
+                    <h5 class="card-title">Avg Perimeter</h5>
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-draw-polygon fa-2x text-danger me-3"></i>
+                      <h2 class="mb-0" id="avgPerimeter">0</h2>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart Section -->
+            <div class="row mb-4 d-none" id="chartSection">
+              <div class="col-md-12">
+                <div class="card shadow-sm">
+                  <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Beans Distribution</h5>
+                  </div>
+                  <div class="card-body">
+                    <canvas id="beansChart"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Search and Table Section -->
+            <div class="row mb-3">
+              <div class="col-md-8">
+                <div class="input-group">
+                  <span class="input-group-text bg-primary text-white"><i class="fas fa-search"></i></span>
+                  <input type="text" id="searchInput" class="form-control" placeholder="Search beans...">
+                  <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="col-md-4 text-end">
+                <div class="btn-group" role="group">
+                  <button class="btn btn-outline-primary" id="exportCsvBtn">
+                    <i class="fas fa-file-csv me-1"></i> Export
+                  </button>
+                  <button class="btn btn-outline-secondary" id="refreshBtn">
+                    <i class="fas fa-sync-alt me-1"></i> Refresh
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-container">
+              <table class="table table-hover align-middle" id="beanTable">
+                <thead class="table-primary">
+                  <tr>
+                    <th>ID <button class="btn btn-sm btn-sort" data-sort="id"><i class="fas fa-sort"></i></button></th>
+                    <th>Bean Class <button class="btn btn-sm btn-sort" data-sort="bean_class"><i class="fas fa-sort"></i></button></th>
+                    <th>Area <button class="btn btn-sm btn-sort" data-sort="area"><i class="fas fa-sort"></i></button></th>
+                    <th>Perimeter <button class="btn btn-sm btn-sort" data-sort="perimeter"><i class="fas fa-sort"></i></button></th>
+                    <th>Major Axis <button class="btn btn-sm btn-sort" data-sort="major_axis_length"><i class="fas fa-sort"></i></button></th>
+                    <th>Minor Axis <button class="btn btn-sm btn-sort" data-sort="minor_axis_length"><i class="fas fa-sort"></i></button></th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="beansTableBody">
+                 
+                </tbody>
+              </table>
+              <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="text-muted" id="tableInfo">Showing 0 entries</div>
+                <nav aria-label="Page navigation">
+                  <ul class="pagination pagination-sm" id="pagination">
+                    
+                  </ul>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Bean Modal -->
+  <div class="modal fade" id="addBeanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Add New Bean</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="addBeanForm">
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="addBeanClass" class="form-label">Bean Class</label>
+                  <select class="form-select" id="addBeanClass" required>
+                    <option value="">Select bean class</option>
+                    <option value="DERMASON">DERMASON</option>
+                    <option value="SIRA">SIRA</option>
+                    <option value="SEKER">SEKER</option>
+                    <option value="HOROZ">HOROZ</option>
+                    <option value="CALI">CALI</option>
+                    <option value="BARBUNYA">BARBUNYA</option>
+                    <option value="BOMBAY">BOMBAY</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="addBeanArea" class="form-label">Area</label>
+                  <input type="number" step="0.001" class="form-control" id="addBeanArea" required>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="addBeanPerimeter" class="form-label">Perimeter</label>
+                  <input type="number" step="0.001" class="form-control" id="addBeanPerimeter" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="addBeanMajorAxis" class="form-label">Major Axis Length</label>
+                  <input type="number" step="0.001" class="form-control" id="addBeanMajorAxis" required>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="addBeanMinorAxis" class="form-label">Minor Axis Length</label>
+                  <input type="number" step="0.001" class="form-control" id="addBeanMinorAxis" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="addBeanImage" class="form-label">Bean Image (URL)</label>
+                  <input type="url" class="form-control" id="addBeanImage" placeholder="Optional image URL">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-1"></i> Save Bean
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Bean Modal -->
+  <div class="modal fade" id="viewBeanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-info text-white">
+          <h5 class="modal-title"><i class="fas fa-eye me-2"></i>Bean Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="beanDetailsContent">
+       
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="modal fade" id="editBeanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-warning text-white">
+          <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Bean</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="editBeanForm">
+          <input type="hidden" id="editBeanId">
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editBeanClass" class="form-label">Bean Class</label>
+                  <select class="form-select" id="editBeanClass" required>
+                    <option value="">Select bean class</option>
+                    <option value="DERMASON">DERMASON</option>
+                    <option value="SIRA">SIRA</option>
+                    <option value="SEKER">SEKER</option>
+                    <option value="HOROZ">HOROZ</option>
+                    <option value="CALI">CALI</option>
+                    <option value="BARBUNYA">BARBUNYA</option>
+                    <option value="BOMBAY">BOMBAY</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editBeanArea" class="form-label">Area</label>
+                  <input type="number" step="0.001" class="form-control" id="editBeanArea" required>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editBeanPerimeter" class="form-label">Perimeter</label>
+                  <input type="number" step="0.001" class="form-control" id="editBeanPerimeter" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editBeanMajorAxis" class="form-label">Major Axis Length</label>
+                  <input type="number" step="0.001" class="form-control" id="editBeanMajorAxis" required>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editBeanMinorAxis" class="form-label">Minor Axis Length</label>
+                  <input type="number" step="0.001" class="form-control" id="editBeanMinorAxis" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editBeanImage" class="form-label">Bean Image (URL)</label>
+                  <input type="url" class="form-control" id="editBeanImage" placeholder="Optional image URL">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-1"></i> Update Bean
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
